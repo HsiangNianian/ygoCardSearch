@@ -1,0 +1,33 @@
+{
+    "name": "ygoCardSearch",
+    "author": "简律纯",
+    "namespace": "ygoCardSearch",
+    "info": "基本信息:\nygo卡组查询插件(v2) by 简律纯(HsiangNianian@outlook.com).\n\n触发指令:\n匹配轮询:【.ygo s|search】\n随机查询:【.ygo r|random】\n\n相关链接:\nygocdb.com\nss.jyunko.cn",
+    "priority": 30000,
+    "version": "2.2.5",
+    "svn": 22,
+    "compatible_svn": 101,
+    "message_mode": "olivos_string",
+    "support": [
+        {
+            "sdk": "onebot",
+            "platform": "qq",
+            "model": "all"
+        },
+        {
+            "sdk": "all",
+            "platform": "all",
+            "model": "all"
+        }
+    ],
+    "menu_config": [
+        {
+            "title": "ygo配置",
+            "event": "ygoCardSearch_Menu_Conf"
+        },
+        {
+            "title": "GUI界面查询",
+            "event": "ygoCardSearch_Menu_GUI"
+        }
+    ]
+}
