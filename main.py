@@ -32,46 +32,45 @@ os.environ['NO_PROXY'] = 'ygocdb.com,ss.jyunko.cn'
 
 
 class Event(object):
-    def init(plugin_event, Proc):
+    def init(self, Proc):
         pass
 
-    def private_message(plugin_event, Proc):
-        reply(plugin_event, Proc)
+    def private_message(self, Proc):
+        reply(self, Proc)
 
-    def group_message(plugin_event, Proc):
-        reply(plugin_event, Proc)
+    def group_message(self, Proc):
+        reply(self, Proc)
 
-    def poke(plugin_event, Proc):
+    def poke(self, Proc):
         pass
 
-    def save(plugin_event, Proc):
+    def save(self, Proc):
         pass
 
-    def menu(plugin_event, Proc):
-        # TODO(简律纯/2022年12月8日): 菜单栏设置配置以及GUI查询。
-        if plugin_event.data.namespace == 'goCardSearch':  # type: ignore
-            if plugin_event.data.event == 'goCardSearch_Menu_Config':  # type: ignore
-                pass
-            elif plugin_event.data.event == 'goCardSearch_Menu_GUI':  # type: ignore
-                pass
+    def menu(self, Proc):
+        pass
 
 
 def RandomCard():
     cardListUrl = 'https://ss.jyunko.cn/assets/ygoCardIDList'
     cardList = requests.get(cardListUrl).text
     idList1 = re.sub('[^\d\n]', ' ', cardList).split()
-    idList2 = []
-    for ele in range(len(idList1)):
-        if len(idList1[ele]) == 8:
-            idList2.append(idList1[ele])
+    idList2 = [
+        idList1[ele] for ele in range(len(idList1)) if len(idList1[ele]) == 8
+    ]
     id = idList2[random.randint(1, len(idList2))]
-    detailsURL = 'https://ygocdb.com/card/'+id+'#faq'
+    detailsURL = f'https://ygocdb.com/card/{id}#faq'
     imgUrl = requests.get(detailsURL)
     # TODO(简律纯/2022年12月8日): 未来(下个版本)或许会完善随机出卡信息的匹配。
     img = re.search(r'(https://.*\.jpg)',
                     imgUrl.text, re.M | re.I).group()  # type: ignore
-    Name = re.sub('(<span>|</span>)', '', re.search(r'(<span>(.*)</span>)',  # type: ignore
-                  imgUrl.text, re.M | re.I).group(1))
+    Name = re.sub(
+        '(<span>|</span>)',
+        '',
+        re.search(
+            r'(<span>(.*)</span>)', imgUrl.text, re.M | re.I  # type: ignore
+        )[1],
+    )
     # cardDesc = re.search(r'<(.*)class="desc">(.*)</div>',imgUrl.text,re.M|re.I).group(1)
     # jsn = requests.get('https://ygocdb.com/api/vo/>search='+Name).json()
     # cardDesc = jsn['result'][0]['text']['desc']
@@ -81,17 +80,17 @@ def RandomCard():
 
 def reply(plugin_event, Proc):
     ITEM_LIST = plugin_event.data.message.split()
-    tmp_reply_str = ''  # '等待输入编号...\n若需继续查询请输入要查询的编号。\n回复【退出查询】可退出查询。'
-
-    if ITEM_LIST[0] == ".ygo" and (ITEM_LIST[1] == 'search' or ITEM_LIST[1] == 's'):
+    if ITEM_LIST[0] == ".ygo" and ITEM_LIST[1] in ['search', 's']:
         '''轮询查卡
 
         实现:【.ygo s|search】'''
-        URL = 'https://ygocdb.com/api/v0/?search=' + ITEM_LIST[2]
+        URL = f'https://ygocdb.com/api/v0/?search={ITEM_LIST[2]}'
         JSON_DATA = requests.get(URL).json()
         if len(JSON_DATA['result']) == 0:
             plugin_event.reply('找不到这张卡哦...换个关键词吧~')
         else:
+            tmp_reply_str = ''  # '等待输入编号...\n若需继续查询请输入要查询的编号。\n回复【退出查询】可退出查询。'
+
             # ==============================================
             # 请勿多次使用【.ygo s|search】命令 !!!
             # TODO(简律纯/2022年12月8日): 实现阶段限制的issue.
@@ -103,26 +102,35 @@ def reply(plugin_event, Proc):
                 flag = False
 
                 if plugin_event != None:
-                    flag = True
                     indexNum = 5
                     txt = ''
                     # while(len(JSON_DATA['result'])-1-indexNum > 0):
                     if len(JSON_DATA['result']) > 5:
                         for i in range(5):
-                            txt = str(i)+'.' + \
-                                str(JSON_DATA['result'][i]['id'])+':' + \
-                                JSON_DATA['result'][i]['cn_name']+'\n'+txt
+                            txt = (
+                                f'{str(i)}.'
+                                + str(JSON_DATA['result'][i]['id'])
+                                + ':'
+                                + JSON_DATA['result'][i]['cn_name']
+                                + '\n'
+                                + txt
+                            )
                     else:
                         for i in range(len(JSON_DATA['result'])):
-                            txt = str(i)+'.' + \
-                                str(JSON_DATA['result'][i]['id'])+':' + \
-                                JSON_DATA['result'][i]['cn_name']+'\n'+txt
+                            txt = (
+                                f'{str(i)}.'
+                                + str(JSON_DATA['result'][i]['id'])
+                                + ':'
+                                + JSON_DATA['result'][i]['cn_name']
+                                + '\n'
+                                + txt
+                            )
                     plugin_event.reply(
                         '共匹配'+str(len(JSON_DATA['result'])) +
                         '张，列出以下匹配度最高的待选卡:\n'+txt +
                         '输入要查看的编号:'
                     )
-                    if flag:
+                    if flag := True:
                         OlivaDiceCore.msgReply.replyMsg(
                             plugin_event, tmp_reply_str)
                         tmp_select: 'str|None' = OlivaDiceCore.msgReplyModel.replyCONTEXT_regWait(
@@ -139,25 +147,33 @@ def reply(plugin_event, Proc):
                             textTypes = JSON_DATA['result'][index]['text']['types']
                             # textPdesc = JSON_DATA['result'][0]['text']['pdesc']
                             textDesc = JSON_DATA['result'][index]['text']['desc']
-                            detailsURL = 'https://ygocdb.com/card/' + \
-                                str(id)+'#faq'
+                            detailsURL = f'https://ygocdb.com/card/{str(id)}#faq'
                             imgUrl = requests.get(detailsURL)
                             img = re.search(r'(https://.*\.jpg)',
                                             imgUrl.text, re.M | re.I).group()
-                            result = '中文名:'+cn_name+'\n日文名:'+jp_ruby+'\n卡片密码:' + \
-                                str(id)+'\n卡片种类:'+textTypes+'\n' + \
-                                textDesc+'[CQ:image,file='+img+']'
+                            result = (
+                                f'中文名:{cn_name}'
+                                + '\n日文名:'
+                                + jp_ruby
+                                + '\n卡片密码:'
+                                + str(id)
+                                + '\n卡片种类:'
+                                + textTypes
+                                + '\n'
+                                + textDesc
+                                + '[CQ:image,file='
+                                + img
+                                + ']'
+                            )
                             plugin_event.reply(result)
-                            break
-                            # flag = False
+                                                    # flag = False
                         elif type(tmp_select) == str and tmp_select == '退出查询':
                             plugin_event.reply('已退出~\n嘶~看来是找到了想要查询的卡片呢——')
                             flag = False
-                            break
                         else:
                             plugin_event.reply('未查询到匹配条目')
-                            break
-    elif ITEM_LIST[0] == '.ygo' and (ITEM_LIST[1] == 'r' or ITEM_LIST[1] == 'random'):
+                        break
+    elif ITEM_LIST[0] == '.ygo' and ITEM_LIST[1] in ['r', 'random']:
         '''随机抽卡
 
         实现:【.ygo r|random】'''
@@ -166,11 +182,11 @@ def reply(plugin_event, Proc):
             times = ITEM_LIST[2]
         except IndexError:
             times = 1
-        if int(times) > 5:  # type: ignore
+        if times > 5:  # type: ignore
             plugin_event.reply('输入数目超过上限(5)！')
         else:
-            plugin_event.reply('随机抽取'+str(times)+'张卡ing...')
-            for i in range(int(times)):
+            plugin_event.reply(f'随机抽取{times}张卡ing...')
+            for _ in range(times):
                 plugin_event.reply(RandomCard())
 
 
